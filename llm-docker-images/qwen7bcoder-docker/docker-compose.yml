@@ -1,0 +1,35 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # Remove the deploy section below if running without an NVIDIA GPU (CPU-only)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  ollama-pull-model:
+    image: curlimages/curl:latest
+    container_name: ollama_pull_model
+    depends_on:
+      - ollama
+    restart: "no"
+    command: >
+      sh -c "
+      echo 'Waiting for Ollama API...';
+      while ! curl -s http://ollama:11434/api/tags > /dev/null; do sleep 2; done;
+      echo 'Pulling Qwen 2.5 Coder 7B...';
+      curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"qwen2.5-coder:7b\"}';
+      echo 'Model pull complete!';
+      "
+
+volumes:
+  ollama_data:
